@@ -1,26 +1,6 @@
 const express = require('express');
+const puppeteer = require('puppeteer');
 const archiver = require('archiver');
-const { PDFDocument } = require('pdf-lib');
-const cors = require('cors');
-const path = require('path');
-
-const isProduction = process.env.NODE_ENV === 'production' || process.env.VERCEL === '1';
-
-async function getBrowser() {
-    if (isProduction) {
-        const chromium = require('@sparticuz/chromium');
-        const puppeteerCore = require('puppeteer-core');
-        return await puppeteerCore.launch({
-            args: chromium.args,
-            defaultViewport: chromium.defaultViewport,
-            executablePath: await chromium.executablePath(),
-            headless: chromium.headless,
-        });
-    } else {
-        const puppeteer = require('puppeteer');
-        return await puppeteer.launch({ headless: 'new' });
-    }
-}
 const { PDFDocument } = require('pdf-lib');
 const cors = require('cors');
 const path = require('path');
@@ -64,13 +44,10 @@ app.post('/api/extract', async (req, res) => {
     let browser;
     try {
         console.log(`Extracting links from: ${url}`);
-        browser = await getBrowser();
+        browser = await puppeteer.launch({ headless: 'new' });
         const page = await browser.newPage();
         
         await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 60000 });
-        
-        // Wait briefly for client-side frameworks to render links
-        await new Promise(r => setTimeout(r, 2000));
         
         const origin = new URL(url).origin;
         const links = await page.evaluate((origin) => {
@@ -103,7 +80,7 @@ app.post('/api/extract', async (req, res) => {
         res.json({ links });
     } catch (error) {
         console.error('Extraction error:', error);
-        res.status(500).json({ error: 'Failed to extract links', details: error.message, stack: error.stack });
+        res.status(500).json({ error: 'Failed to extract links', details: error.message });
     } finally {
         if (browser) await browser.close();
     }
@@ -119,7 +96,7 @@ app.post('/api/download-zip', async (req, res) => {
     let browser;
     try {
         console.log(`Starting PDF generation for ${urls.length} URLs`);
-        browser = await getBrowser();
+        browser = await puppeteer.launch({ headless: 'new' });
         
         const archive = archiver('zip', { zlib: { level: 9 } });
         
@@ -165,7 +142,7 @@ app.post('/api/download-zip', async (req, res) => {
     } catch (error) {
         console.error('Download error:', error);
         if (!res.headersSent) {
-            res.status(500).json({ error: 'Failed to generate PDF bundle', details: error.message, stack: error.stack });
+            res.status(500).json({ error: 'Failed to generate PDF bundle' });
         }
     } finally {
         if (browser) await browser.close();
@@ -182,7 +159,7 @@ app.post('/api/download-single', async (req, res) => {
     let browser;
     try {
         console.log(`Starting PDF merge for ${urls.length} URLs`);
-        browser = await getBrowser();
+        browser = await puppeteer.launch({ headless: 'new' });
         
         const mergedPdf = await PDFDocument.create();
 
@@ -227,7 +204,7 @@ app.post('/api/download-single', async (req, res) => {
     } catch (error) {
         console.error('Download single error:', error);
         if (!res.headersSent) {
-            res.status(500).json({ error: 'Failed to generate merged PDF', details: error.message, stack: error.stack });
+            res.status(500).json({ error: 'Failed to generate merged PDF' });
         }
     } finally {
         if (browser) await browser.close();
