@@ -1,5 +1,7 @@
 const express = require('express');
 const archiver = require('archiver');
+const axios = require('axios');
+const cheerio = require('cheerio');
 
 const isProduction = process.env.NODE_ENV === 'production' || process.env.VERCEL === '1';
 
@@ -53,53 +55,54 @@ app.get('/', (req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
-// Endpoint 1: Extract links
+// Endpoint 1: Extract links (Using Cheerio to avoid Chromium dependency on Vercel)
 app.post('/api/extract', async (req, res) => {
     const { url } = req.body;
     if (!url) return res.status(400).json({ error: 'URL is required' });
 
-    let browser;
     try {
         console.log(`Extracting links from: ${url}`);
-        browser = await getBrowser();
-        const page = await browser.newPage();
         
-        await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 60000 });
-        
+        const response = await axios.get(url, {
+            headers: {
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36',
+                'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8'
+            },
+            timeout: 15000
+        });
+
+        const $ = cheerio.load(response.data);
         const origin = new URL(url).origin;
-        const links = await page.evaluate((origin) => {
-            const anchors = Array.from(document.querySelectorAll('a'));
-            const extracted = [];
-            const seen = new Set();
+        const extracted = [];
+        const seen = new Set();
+        
+        $('a').each((i, el) => {
+            let href = $(el).attr('href');
+            if (!href) return;
             
-            for (let a of anchors) {
-                let href = a.href;
-                if (!href) continue;
+            if (href.startsWith('/')) {
+                href = origin + href;
+            }
+            
+            if (href.includes('javascript:') || href.includes('login') || href.includes('logout') || href.includes('mailto:')) return;
+            href = href.split('#')[0];
+            
+            if (href.startsWith(origin)) {
+                let text = $(el).text().trim();
+                if (!text) text = href.replace(origin, '');
+                if (!text || text === '/') text = 'Home / ' + href.split('/').pop();
                 
-                if (href.includes('javascript:') || href.includes('login') || href.includes('logout') || href.includes('mailto:')) continue;
-                
-                href = href.split('#')[0];
-                
-                if (href.startsWith(origin)) {
-                    let text = a.innerText.trim();
-                    if (!text) text = href.replace(origin, '');
-                    if (!text || text === '/') text = 'Home / ' + href.split('/').pop();
-                    
-                    if (!seen.has(href)) {
-                        seen.add(href);
-                        extracted.push({ url: href, title: text });
-                    }
+                if (!seen.has(href)) {
+                    seen.add(href);
+                    extracted.push({ url: href, title: text });
                 }
             }
-            return extracted;
-        }, origin);
+        });
 
-        res.json({ links });
+        res.json({ links: extracted });
     } catch (error) {
         console.error('Extraction error:', error);
         res.status(500).json({ error: 'Failed to extract links', details: error.message, stack: error.stack });
-    } finally {
-        if (browser) await browser.close();
     }
 });
 
