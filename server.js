@@ -1,9 +1,26 @@
 const express = require('express');
-const puppeteer = require('puppeteer');
 const archiver = require('archiver');
 const { PDFDocument } = require('pdf-lib');
 const cors = require('cors');
 const path = require('path');
+
+// Utility to conditionally launch browser for Vercel/Local
+async function launchBrowser() {
+    if (process.env.VERCEL || process.env.NODE_ENV === 'production') {
+        const chromium = require('@sparticuz/chromium');
+        const puppeteerCore = require('puppeteer-core');
+        return await puppeteerCore.launch({
+            args: chromium.args,
+            defaultViewport: chromium.defaultViewport,
+            executablePath: await chromium.executablePath(),
+            headless: chromium.headless,
+            ignoreHTTPSErrors: true,
+        });
+    } else {
+        const puppeteer = require('puppeteer');
+        return await puppeteer.launch({ headless: 'new' });
+    }
+}
 
 // Utility function to auto-scroll page to trigger lazy loaded images
 async function autoScroll(page) {
@@ -44,7 +61,7 @@ app.post('/api/extract', async (req, res) => {
     let browser;
     try {
         console.log(`Extracting links from: ${url}`);
-        browser = await puppeteer.launch({ headless: 'new' });
+        browser = await launchBrowser();
         const page = await browser.newPage();
         
         await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 60000 });
@@ -96,7 +113,7 @@ app.post('/api/download-zip', async (req, res) => {
     let browser;
     try {
         console.log(`Starting PDF generation for ${urls.length} URLs`);
-        browser = await puppeteer.launch({ headless: 'new' });
+        browser = await launchBrowser();
         
         const archive = archiver('zip', { zlib: { level: 9 } });
         
@@ -159,7 +176,7 @@ app.post('/api/download-single', async (req, res) => {
     let browser;
     try {
         console.log(`Starting PDF merge for ${urls.length} URLs`);
-        browser = await puppeteer.launch({ headless: 'new' });
+        browser = await launchBrowser();
         
         const mergedPdf = await PDFDocument.create();
 
