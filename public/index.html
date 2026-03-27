@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bulk Article PDF Downloader</title>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css?v=3">
+</head>
+<body>
+    <div class="glass-bg"></div>
+    <div class="container">
+        <header>
+            <h1>Knowledge Base Downloader</h1>
+            <p>Paste a documentation URL below to automatically scrape and download all articles as a beautifully formatted single PDF.</p>
+        </header>
+
+        <main>
+            <!-- Step 1: Input URL -->
+            <div id="step-1" class="card active">
+                <div class="input-group">
+                    <input type="url" id="portal-url" placeholder="https://react.dev/reference/react" required>
+                    <button class="btn btn-primary" id="btn-extract">
+                        <span class="btn-text">Extract Links</span>
+                        <div class="loader hidden" id="extract-loader"></div>
+                    </button>
+                    <p class="error-text hidden" id="extract-error"></p>
+                </div>
+            </div>
+
+            <!-- Step 2: Select Articles -->
+            <div id="step-2" class="card hidden">
+                <div class="header-actions">
+                    <h2>Found <span id="link-count">0</span> Articles</h2>
+                    <div class="toggle-group">
+                        <button class="btn btn-icon" id="btn-copy-bulk">Copy Bulk</button>
+                        <button class="btn btn-icon" id="btn-select-all">Select All</button>
+                        <button class="btn btn-icon" id="btn-deselect-all">Deselect All</button>
+                    </div>
+                </div>
+
+                <div class="list-container" id="links-container">
+                    <!-- Checkboxes injected here -->
+                </div>
+
+                <div class="footer-actions">
+                    <button class="btn btn-outline" id="btn-back">Back</button>
+                    <button class="btn btn-primary" id="btn-download-single">
+                        <span class="btn-text" id="dl-single-text">Download as Merged PDF</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Step 3: Processing Status -->
+            <div id="step-3" class="card hidden text-center">
+                <h2>Generating & Merging PDFs...</h2>
+                <div class="progress-bar-container">
+                    <div class="progress-bar" id="progress-bar"></div>
+                </div>
+                <p class="progress-info">This will take some time depending on the number of articles.</p>
+                <div class="bouncing-dots">
+                    <div></div><div></div><div></div>
+                </div>
+            </div>
+            
+            <!-- Step 4: Success -->
+            <div id="step-4" class="card hidden text-center">
+                <div class="success-icon">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>
+                </div>
+                <h2>Download Complete!</h2>
+                <p>Your merged PDF has been downloaded successfully.</p>
+                <button class="btn btn-primary mt-4" id="btn-restart">Extract Another Portal</button>
+            </div>
+        </main>
+    </div>
+    <script src="app.js?v=3"></script>
+</body>
+</html>
