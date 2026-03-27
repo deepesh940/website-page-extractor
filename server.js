@@ -97,7 +97,7 @@ app.post('/api/extract', async (req, res) => {
         res.json({ links });
     } catch (error) {
         console.error('Extraction error:', error);
-        res.status(500).json({ error: 'Failed to extract links', details: error.message });
+        res.status(500).json({ error: 'Failed to extract links', details: error.message, stack: error.stack });
     } finally {
         if (browser) await browser.close();
     }
@@ -159,7 +159,7 @@ app.post('/api/download-zip', async (req, res) => {
     } catch (error) {
         console.error('Download error:', error);
         if (!res.headersSent) {
-            res.status(500).json({ error: 'Failed to generate PDF bundle' });
+            res.status(500).json({ error: 'Failed to generate PDF bundle', details: error.message, stack: error.stack });
         }
     } finally {
         if (browser) await browser.close();
@@ -221,7 +221,7 @@ app.post('/api/download-single', async (req, res) => {
     } catch (error) {
         console.error('Download single error:', error);
         if (!res.headersSent) {
-            res.status(500).json({ error: 'Failed to generate merged PDF' });
+            res.status(500).json({ error: 'Failed to generate merged PDF', details: error.message, stack: error.stack });
         }
     } finally {
         if (browser) await browser.close();
